@@ -1,14 +1,21 @@
 package com.tomi.tivi;
 
-import com.tomi.tivi.util.SystemUiHider;
+import java.util.ArrayList;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.Spinner;
+import android.widget.ToggleButton;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -17,138 +24,166 @@ import android.view.View;
  * @see SystemUiHider
  */
 public class TiviActivity extends Activity {
-	/**
-	 * Whether or not the system UI should be auto-hidden after
-	 * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
-	 */
-	private static final boolean AUTO_HIDE = true;
-
-	/**
-	 * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
-	 * user interaction before hiding the system UI.
-	 */
-	private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
-
-	/**
-	 * If set, will toggle the system UI visibility upon interaction. Otherwise,
-	 * will show the system UI visibility upon interaction.
-	 */
-	private static final boolean TOGGLE_ON_CLICK = true;
-
-	/**
-	 * The flags to pass to {@link SystemUiHider#getInstance}.
-	 */
-	private static final int HIDER_FLAGS = SystemUiHider.FLAG_HIDE_NAVIGATION;
-
-	/**
-	 * The instance of the {@link SystemUiHider} for this activity.
-	 */
-	private SystemUiHider mSystemUiHider;
+	int tiviDivides = 1000;
+	CameraViewer cameraView;
+	TiViProcessor tiviView;
+	ToggleButton cameraButton;
+	SeekBar cameraZoom;
+	SeekBar exposure;
+	Spinner videoMode;
+	
+	ToggleButton tiviButton;
+	SeekBar tiviMin;
+	SeekBar tiviMax;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		setContentView(R.layout.activity_tivi);
 
-		final View controlsView = findViewById(R.id.fullscreen_content_controls);
-		final View contentView = findViewById(R.id.fullscreen_content);
+		cameraView = (CameraViewer) findViewById(R.id.cameraViewer);
+		tiviView = (TiViProcessor) findViewById(R.id.tiviViewer);
+		cameraButton = (ToggleButton) findViewById(R.id.processingButton);
+		cameraZoom = (SeekBar) findViewById(R.id.zoomValueBar);
+		exposure = (SeekBar) findViewById(R.id.expValueBar);
+		videoMode = (Spinner) findViewById(R.id.videoModes);
+		
+		tiviButton = (ToggleButton) findViewById(R.id.tiviProcessing);
+		tiviMin = (SeekBar) findViewById(R.id.tiviMinValue);
+		tiviMax = (SeekBar) findViewById(R.id.tiviMaxValue);
 
-		// Set up an instance of SystemUiHider to control the system UI for
-		// this activity.
-		mSystemUiHider = SystemUiHider.getInstance(this, contentView, HIDER_FLAGS);
-		mSystemUiHider.setup();
-		mSystemUiHider.setOnVisibilityChangeListener(new SystemUiHider.OnVisibilityChangeListener() {
-			// Cached values.
-			int mControlsHeight;
-			int mShortAnimTime;
+		// 2*tiviDivides is so that you have positive + negavie
+		tiviMin.setMax(2*tiviDivides);
+		tiviMax.setMax(2*tiviDivides);
+		
+		tiviMin.setProgress(0);
+		tiviMax.setProgress(2*tiviDivides);
+		tiviView.setMinVal(-1f);
+		tiviView.setMaxVal(1f);
+		
+		/**
+		 * Setup Camera
+		 */
+		cameraView.initCamera();
+
+		/**
+		 * Setup available modes
+		 */
+		ArrayList<SizeHolder> sizeData = cameraView.getAvailableVideoModes();
+		cameraView.setPreviewSize(sizeData.get(0).size);
+		ArrayAdapter adapter = new ArrayAdapter(this, android.R.layout.simple_spinner_item, sizeData);
+		videoMode.setAdapter(adapter);
+
+		/**
+		 * Setup TIVI panel
+		 */
+		cameraView.setTiviProcessor(tiviView);
+
+		
+		createListeners();
+	}
+
+	public void createListeners() {
+		videoMode.setOnItemSelectedListener(new OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
+				cameraView.setPreviewSize(((SizeHolder) videoMode.getSelectedItem()).size);
+			}
 
 			@Override
-			@TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
-			public void onVisibilityChange(boolean visible) {
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
-					// If the ViewPropertyAnimator API is available
-					// (Honeycomb MR2 and later), use it to animate the
-					// in-layout UI controls at the bottom of the
-					// screen.
-					if (mControlsHeight == 0) {
-						mControlsHeight = controlsView.getHeight();
-					}
-					if (mShortAnimTime == 0) {
-						mShortAnimTime = getResources().getInteger(android.R.integer.config_shortAnimTime);
-					}
-					controlsView.animate().translationY(visible ? 0 : mControlsHeight).setDuration(mShortAnimTime);
-				} else {
-					// If the ViewPropertyAnimator APIs aren't
-					// available, simply show or hide the in-layout UI
-					// controls.
-					controlsView.setVisibility(visible ? View.VISIBLE : View.GONE);
-				}
+			public void onNothingSelected(AdapterView<?> parentView) {
+				// your code here
+			}
 
-				if (visible && AUTO_HIDE) {
-					// Schedule a hide().
-					delayedHide(AUTO_HIDE_DELAY_MILLIS);
+		});
+
+		cameraButton.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				if (isChecked) {
+					cameraView.startCamera();
+				} else {
+					cameraView.pauseCamera();
 				}
 			}
 		});
+		cameraZoom.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
 
-		// Set up the user interaction to manually show or hide the system UI.
-		contentView.setOnClickListener(new View.OnClickListener() {
 			@Override
-			public void onClick(View view) {
-				if (TOGGLE_ON_CLICK) {
-					mSystemUiHider.toggle();
-				} else {
-					mSystemUiHider.show();
-				}
+			public void onStopTrackingTouch(SeekBar seekBar) {
+			}
+
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+			}
+
+			@Override
+			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+				cameraView.setZoom(progress / (float) seekBar.getMax());
 			}
 		});
 
-		// Upon interacting with UI controls, delay any scheduled hide()
-		// operations to prevent the jarring behavior of controls going away
-		// while interacting with the UI.
-		findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
-	}
+		exposure.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
 
-	@Override
-	protected void onPostCreate(Bundle savedInstanceState) {
-		super.onPostCreate(savedInstanceState);
-
-		// Trigger the initial hide() shortly after the activity has been
-		// created, to briefly hint to the user that UI controls
-		// are available.
-		delayedHide(100);
-	}
-
-	/**
-	 * Touch listener to use for in-layout UI controls to delay hiding the
-	 * system UI. This is to prevent the jarring behavior of controls going away
-	 * while interacting with activity UI.
-	 */
-	View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
-		@Override
-		public boolean onTouch(View view, MotionEvent motionEvent) {
-			if (AUTO_HIDE) {
-				delayedHide(AUTO_HIDE_DELAY_MILLIS);
+			@Override
+			public void onStopTrackingTouch(SeekBar seekBar) {
 			}
-			return false;
-		}
-	};
 
-	Handler mHideHandler = new Handler();
-	Runnable mHideRunnable = new Runnable() {
-		@Override
-		public void run() {
-			mSystemUiHider.hide();
-		}
-	};
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+			}
 
-	/**
-	 * Schedules a call to hide() in [delay] milliseconds, canceling any
-	 * previously scheduled calls.
-	 */
-	private void delayedHide(int delayMillis) {
-		mHideHandler.removeCallbacks(mHideRunnable);
-		mHideHandler.postDelayed(mHideRunnable, delayMillis);
+			@Override
+			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+				cameraView.setExposureCompensation(progress / (float) seekBar.getMax());
+			}
+		});
+		
+		tiviMin.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+
+			@Override
+			public void onStopTrackingTouch(SeekBar seekBar) {
+			}
+
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+			}
+
+			@Override
+			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+				tiviView.setMinVal(progress / (float) tiviDivides);
+			}
+		});
+		
+		tiviMax.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+
+			@Override
+			public void onStopTrackingTouch(SeekBar seekBar) {
+			}
+
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+			}
+
+			@Override
+			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+				tiviView.setMaxVal(progress / (float) tiviDivides);
+			}
+		});
+
+
+	}
+
+	private void updateFullscreenStatus(boolean bUseFullscreen) {
+		if (bUseFullscreen) {
+			getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+			getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+		} else {
+			getWindow().addFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+			getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		}
+
+		cameraView.requestLayout();
 	}
 }
