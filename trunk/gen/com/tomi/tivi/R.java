@@ -25,9 +25,35 @@ or to a theme attribute in the form "<code>?[<i>package</i>:][<i>type</i>:]<i>na
         public static final int ic_launcher=0x7f020000;
     }
     public static final class id {
-        public static final int dummy_button=0x7f070002;
-        public static final int fullscreen_content=0x7f070000;
-        public static final int fullscreen_content_controls=0x7f070001;
+        public static final int cameraViewer=0x7f070001;
+        public static final int content=0x7f070005;
+        public static final int expValueBar=0x7f070012;
+        public static final int handle=0x7f070006;
+        public static final int holder=0x7f070000;
+        public static final int mainPage=0x7f070003;
+        public static final int processingButton=0x7f07000c;
+        public static final int slidingDrawer1=0x7f070004;
+        public static final int tableRow0=0x7f070007;
+        public static final int tableRow1=0x7f07000a;
+        public static final int tableRow2=0x7f07000d;
+        public static final int tableRow3=0x7f070010;
+        public static final int tableRow4=0x7f070013;
+        public static final int tableRow5=0x7f070014;
+        public static final int tableRow6=0x7f070017;
+        public static final int tableRow7=0x7f07001a;
+        public static final int textView0=0x7f07000b;
+        public static final int textView1=0x7f070008;
+        public static final int textView2=0x7f07000e;
+        public static final int textView3=0x7f070011;
+        public static final int textView4=0x7f070015;
+        public static final int textView5=0x7f07001b;
+        public static final int textView6=0x7f070018;
+        public static final int tiviMaxValue=0x7f07001c;
+        public static final int tiviMinValue=0x7f070019;
+        public static final int tiviProcessing=0x7f070016;
+        public static final int tiviViewer=0x7f070002;
+        public static final int videoModes=0x7f070009;
+        public static final int zoomValueBar=0x7f07000f;
     }
     public static final class layout {
         public static final int activity_tivi=0x7f030000;
